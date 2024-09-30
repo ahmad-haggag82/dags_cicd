@@ -5,4 +5,7 @@ files:
     destination: /home/ec2-user/ingestion
 hooks:
   BeforeInstall:
+  AfterInstall:
+  ApplicationStart:
   ApplicationStop:
+   
