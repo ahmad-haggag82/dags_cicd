@@ -1,0 +1,75 @@
+---
+
+pipeline:
+  name: lt_99_GL_TRANS_DUMP_MONTHLY_PKG_dag
+  description: 99_GL_TRANS_DUMP_MONTHLY_PKG package
+  schedule: "@monthly"
+  tags:
+    - lifetouch
+    - 99_GL_TRANS_DUMP_MONTHLY_PKG
+  
+  task_groups:
+    - name: 99_GL_TRANS_DUMP_MONTHLY_PKG_export
+      description: drop and recreate table then extract data and load to s3
+      export_file_name:
+      # This attribute is used to specify the name of the exported CSV file. 
+      # Each key-value pair added here will represent a variable name and its corresponding SQL file.
+      # The export script will handle different cases based on whether the value of the variable name 
+      # should replace the variable name of the next attribute and return only the final value, 
+      # or whether it should run all SQLs and concatenate the names.
+        v_US_data_center_replace_space: dags/sql/pre_sql/v_US_data_center_replace_space.sql
+        v_ep_dump_file_num: dags/sql/pre_sql/v_ep_dump_file_num.sql
+        v_actuate_sysdate: dags/sql/pre_sql/v_actuate_sysdate.sql
+      pre_sql:
+      # Any export mechanism involves two steps: creating a table and executing a select query. 
+      # The create table step may require replacing certain placeholders.
+      # To address this, we include these pre-SQL statements to replace those placeholders in the temporary create query.
+        v_ep_dump_start_ct: dags/sql/pre_sql/v_ep_dump_start_ct.sql
+        v_ep_dump_file_max: dags/sql/pre_sql/v_ep_dump_file_max.sql
+        v_gl_dump_start_ct: dags/sql/pre_sql/v_ep_dump_start_ct.sql
+        v_gl_dump_file_max: dags/sql/pre_sql/v_ep_dump_file_max.sql
+
+      tasks:
+      # Tasks represent the number of the subpakages.
+        - script_location: dags/sql/99_GL_TRANS_DUMP_MONTHLY_PKG/EP_TRANS_DUMP_create_tmp.sql
+        # Script location to create the table
+          export_files:
+          # For each script location or create tmp table, we may need to export one or mutiple files.
+            - extract_query: '99_GL_TRANS_DUMP_MONTHLY_PKG/ep_trans_dump_export.sql'
+              # The extract query is a select statement will be executed on the ec2 as intermediate storage before writing the csv file into s3
+              export_location: finance/General_Ledger_Posting/GL_TRANS_DTL_DUMP_EVENT_PAYMENT
+              # Each pkg as its own may to locate the files in s3, so this path is the path before the file name. 
+          email_configurations:
+          # Some pkgs required sending email after exporting the csv files. if that the case, you will need to add the email configurations
+              subject: Event_Payment_Dump Files Created
+              # The subject of the email found in the odi extraction
+              to_list: v_error_email_to
+              # The list of the emails will be executed as a query for the var v_error_email_to <blocked>
+
+        - script_location: dags/sql/99_GL_TRANS_DUMP_MONTHLY_PKG/YB_TRANS_DUMP_SAP_create_tmp.sql
+          export_files:
+            - extract_query: '99_GL_TRANS_DUMP_MONTHLY_PKG/yb_trans_dump_sap_export.sql'
+              export_location: finance/General_Ledger_Posting/GL_TRANS_DTL_DUMP_YearBook_Postings
+
+        
+    - name: 99_GL_TRANS_DUMP_MONTHLY_PKG_ODI_Transformation
+      # This task represents the normal oracle task, only need to update a table at the end of the pkg
+      description: ODI SQL Transformation Logic
+      pre_sql:
+        v_cdc_load_date: dags/sql/pre_sql.sql
+
+      default_args:
+        v_cdc_overlap: 0.02083333333
+      tasks: 
+        - description: run_pkg
+          type: oracle_sql
+          script_location: dags/sql/99_GL_TRANS_DUMP_MONTHLY_PKG/EP_TRANS_DUMP_PKG.sql
+          args:
+            v_cdc_load_table_name: GL_TRANS_DTL_DUMP
+            v_cdc_oms_overlap: 0.02083333333
+        - description: run_pkg
+          type: oracle_sql
+          script_location: dags/sql/99_GL_TRANS_DUMP_MONTHLY_PKG/YB_TRANS_DUMP_SAP_PKG.sql
+          args:
+            v_cdc_load_table_name: GL_TRANS_DTL_DUMP
+            v_cdc_oms_overlap: 0.02083333333

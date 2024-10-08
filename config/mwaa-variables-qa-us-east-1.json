@@ -1,0 +1,10 @@
+{
+    "Country": "US",
+    "Environment": "qa",
+    "AWS_ACCOUNT" : "904425659397",
+    "PDW_CONNECTION_ID": "oracle_qdw/lt_airflow",
+    "LIFETOUCH_LIB_NAME": "lifetouch_lib-0.1.8-py3-none-any.whl",
+    "SSH_CONNECTION": "qa_batch_ingestion",
+    "MWAA_BUCKET": "",
+    "sns_mwaa_notification_topic_arn": "arn:aws:sns:us-east-1:904425659397:sfly-aws-dwh-lifetouch-prod-mwaa-qa-dags-sns"
+}

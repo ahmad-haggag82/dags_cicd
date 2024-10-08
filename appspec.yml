@@ -1,0 +1,11 @@
+version: 0.0
+os: linux
+files:
+  - source: ingestion.py
+    destination: /home/ec2-user/ingestion
+hooks:
+  BeforeInstall:
+  AfterInstall:
+  ApplicationStart:
+  ApplicationStop:
+   
