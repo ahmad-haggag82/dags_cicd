@@ -1,8 +1,6 @@
 #!/bin/bash
 
-git diff --name-only $COMMIT_ID >> dag_out
-cat dag_out
-grep -E "dags/config|dags/sql" dag_out | awk -F / '{print $3}' | sort | uniq | while IFS= read -r dir; do
+git diff --name-only $COMMIT_ID | grep -E "dags/config|dags/sql" | awk -F / '{print $3}' | sort | uniq | while IFS= read -r dir; do
   echo "Dag config directory name: $dir"
   dag_name=$(grep -m1 'name:' config/$dir/*.yaml | awk '{ print $2}')
   echo "Dag Name : $dag_name"
