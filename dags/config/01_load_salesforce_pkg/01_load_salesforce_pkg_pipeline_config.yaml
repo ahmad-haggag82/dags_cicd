@@ -4,7 +4,6 @@ pipeline:
   name: lt_01_load_salesforce_pkg_dag
   description: 01_load_salesforce_pkg package
   schedule: "0 * * * *"
-  
   tags:
     - lifetouch
     - 01_load_salesforce_pkg
